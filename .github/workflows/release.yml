@@ -1,0 +1,42 @@
+# 태그(v1.14.0 등)를 푸시하면 테스트·빌드를 확인한 뒤 schedule-app.zip을 만들어 Release에 올린다.
+# 이 파일은 배포 저장소에만 둔다 (작업 폴더의 npm run release 결과물에는 들어가지 않음).
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write   # Release 생성에 필요
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 설치·테스트·빌드 확인
+        run: |
+          npm ci
+          npm test
+          npm run build
+
+      - name: 브라우저 설치용 파일이 최신 빌드와 같은지 확인
+        run: |
+          cmp dist/index.html apps-script/index.html
+          test -s apps-script/Code.gs
+          test -s apps-script/appsscript.json
+
+      - name: 배포 zip 만들기 (빌드 산출물·저장소 설정 제외)
+        run: |
+          git archive --format=zip --prefix=schedule-app/ -o schedule-app.zip HEAD -- . ':(exclude).github'
+
+      - name: Release 만들기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" schedule-app.zip --title "$GITHUB_REF_NAME" --generate-notes --verify-tag

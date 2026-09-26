@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-mock/
+# 빌드 때 생성 (원본: dist/index.html, config/appsscript.json)
+gas/index.html
+gas/appsscript.json
+# clasp 프로젝트 연결 정보 (계정마다 다름)
+.clasp.json
+*.log
+.DS_Store
+# 전달 패키지 결과물과 개인정보 검사 패턴 (패턴 파일은 절대 공유하지 않음)
+release/
+release.private.txt
+# 키·비밀 파일 (절대 커밋·전달 금지)
+.key
+*.key
