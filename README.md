@@ -5,6 +5,13 @@
 일정·작업기록·다이어리를 한 화면에서 관리하는 **개인용** 앱입니다.
 서버나 프로그램 설치 없이, **각자 자기 Google 계정에 설치해서 혼자 씁니다.**
 
+<p align="center"><img src="assets/readme/screen-main.png" width="900" alt="메인 화면: 왼쪽은 월 캘린더, 오른쪽은 고른 날짜의 일정·작업기록"></p>
+<p align="center"><sub>메인 화면 — 왼쪽은 월 캘린더(일정·작업기록·구글 캘린더 회의·공휴일), 오른쪽은 고른 날짜의 일정·작업기록·다이어리. 화면의 데이터는 예시입니다.</sub></p>
+
+| 오늘 요약 (그날 처음 열 때) | 주간 보고 (글 만들어 복사) | 휴대폰 화면 |
+|:---:|:---:|:---:|
+| <img src="assets/readme/screen-today.png" width="260" alt="오늘 요약 팝업"> | <img src="assets/readme/screen-weekly.png" width="300" alt="주간 보고 창"> | <img src="assets/readme/screen-mobile.png" width="150" alt="휴대폰 화면"> |
+
 > **처음 설치하는 분은 이 순서대로 따라 하세요 (약 20분)**
 >
 > [0. 준비물](#0-준비물) → [1. 파일 받기](#1-파일-받기) → [2. 설치하기](#2-설치하기-설치-방법-a) → [3. 처음 써 보기](#3-처음-써-보기)
@@ -360,7 +367,7 @@ gas/                     서버 코드 (Apps Script)
 src/                     화면 (Vue 3)
 tests/                   테스트
 scripts/                 빌드·전달 패키지 스크립트 (make-icons.mjs: 로고를 바꿀 때 아이콘 다시 만들기, sharp 필요)
-assets/                  로고 원본(logo.svg)과 PNG, README 그림(readme/)
+assets/                  로고 원본(logo.svg)과 PNG, README 그림·화면 예시(readme/)
 ```
 
 </details>
