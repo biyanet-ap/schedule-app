@@ -63,6 +63,7 @@
 1. GitHub에서 온 **초대 메일**을 열고 **Join(초대 수락)** 을 누릅니다
 2. GitHub에 로그인한 상태로 **https://github.com/biyanet-ap/schedule-app/releases** 를 엽니다
 3. 맨 위(최신) 버전의 **Assets**에서 **`schedule-app.zip`** 을 눌러 받습니다 (「Source code」 말고 `schedule-app.zip`)
+    - 같은 곳에 그림이 들어간 **설명서 PDF**도 있습니다: `schedule-app-manual-ko.pdf`(한국어), `schedule-app-manual-ja.pdf`(日本語)
 4. 받은 zip 파일을 오른쪽 클릭 → **압축 풀기** 합니다
 
 ✅ **확인:** 압축을 푼 `schedule-app` 폴더 안의 **`apps-script`** 폴더에 파일 3개가 있으면 준비 끝입니다.
