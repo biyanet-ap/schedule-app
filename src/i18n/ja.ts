@@ -50,7 +50,7 @@ const ja: Messages = {
     allProjects: 'すべてのプロジェクト',
     brand: 'スケジュール',
     diary: '📔 日記',
-    holidayMissing: '日本の祝日カレンダーを読み込めないため、祝日が表示されていません。Googleカレンダーに「日本の祝日」カレンダーを追加すると表示されます。',
+    holidayMissing: '日本の祝日カレンダーを読み込めないため、祝日が表示されていません。Googleカレンダーに「日本の祝日」カレンダー(英語の画面では「Holidays in Japan」、韓国語の画面では韓国語の名前)を追加すると表示されます。',
     legend: '凡例',
     legendHoliday: '赤い日付 = 土日・祝日',
     legendMeeting: '会議の予定',

@@ -107,9 +107,19 @@ const TRIGGERS = Object.freeze({
   BACKUP: Object.freeze({ handler: 'weeklyBackup', hour: 3 }),
 });
 
-const HOLIDAY_CALENDAR_ID = 'ja.japanese#holiday@group.v.calendar.google.com';
-/** 공휴일 캘린더 중 이 문자열이 설명에 들어간 이벤트는 쉬는 날이 아닌 기념일로 본다. */
-const NON_HOLIDAY_MARKER = '祭日';
+/**
+ * 일본 공휴일 캘린더 ID (v1.15). 구글 캘린더에서 추가할 때 화면 언어에 따라 다른 캘린더가 추가된다.
+ * - ja: 「日本の祝日」 — 공휴일 이름·설명이 일본어
+ * - ko: 「일본의 휴일」, en: 「Holidays in Japan」 — 공휴일 이름·설명이 영어
+ * 앞에서부터 찾아 먼저 구독돼 있는 것을 쓴다 (일본어 이름이 나오는 ja 우선). 설계: docs/design/holiday-calendar.md
+ */
+const HOLIDAY_CALENDAR_IDS = Object.freeze([
+  'ja.japanese#holiday@group.v.calendar.google.com',
+  'ko.japanese#holiday@group.v.calendar.google.com',
+  'en.japanese#holiday@group.v.calendar.google.com',
+]);
+/** 공휴일 캘린더 이벤트 설명의 첫 줄이 이 값이면 쉬는 날이 아닌 기념일로 본다 (ja: 祭日, ko·en: Observance) */
+const NON_HOLIDAY_MARKERS = Object.freeze(['祭日', 'Observance']);
 
 const PROP_KEYS = Object.freeze({
   SPREADSHEET_ID: 'SPREADSHEET_ID',
@@ -432,7 +442,7 @@ const MSG_KO_ = {
   'setup.dbExisting': function (url) { return '[OK] 기존 스프레드시트 사용: ' + url; },
   'setup.dbCreated': function (url) { return '[OK] 스프레드시트 생성: ' + url; },
   'setup.holidayOk': '[OK] 일본 공휴일 캘린더 확인됨',
-  'setup.holidayWarn': '[WARN] 일본 공휴일 캘린더를 읽을 수 없습니다. 구글 캘린더에서 "日本の祝日"(일본 공휴일) 캘린더를 추가하면 공휴일에는 메일을 보내지 않습니다.',
+  'setup.holidayWarn': '[WARN] 일본 공휴일 캘린더를 읽을 수 없습니다. 구글 캘린더에 「일본 공휴일」(일본어 화면: 「日本の祝日」, 영어 화면: 「Holidays in Japan」) 캘린더를 추가하면 공휴일에는 메일을 보내지 않습니다.',
   'selftest.cellChanged': function (list) { return '[FAIL] 셀 저장 왕복: 값이 바뀜 → ' + list; },
   'selftest.cellOk': function (n) { return '[OK] 셀 저장 왕복 (' + n + '개 값 그대로 유지)'; },
   'selftest.check.owner': '소유자 확인',
@@ -446,7 +456,7 @@ const MSG_KO_ = {
   'selftest.sheetMissing': function (name) { return name + ' 시트 없음'; },
   'selftest.headerMismatch': function (name, header) { return name + ' 머리글 불일치: ' + header + ' (setup을 다시 실행하면 새 열이 추가됩니다)'; },
   'selftest.calendarOk': function (n) { return '[OK] 기본 캘린더 조회 (오늘 ' + n + '건)'; },
-  'selftest.holidayOk': '[OK] 일본 공휴일 캘린더 구독됨',
+  'selftest.holidayOk': function (name) { return '[OK] 일본 공휴일 캘린더 구독됨' + (name ? ': ' + name : ''); },
   'selftest.holidayWarn': '[WARN] 일본 공휴일 캘린더 미구독 (공휴일에도 메일 발송됨)',
   'selftest.quota': function (n) { return '[OK] 오늘 남은 메일 발송 가능 수: ' + n; },
   'selftest.backupFolder': function (name) { return '[OK] 백업 폴더: ' + name; },
@@ -605,7 +615,7 @@ const MSG_JA_ = {
   'setup.dbExisting': function (url) { return '[OK] 既存のスプレッドシートを使用: ' + url; },
   'setup.dbCreated': function (url) { return '[OK] スプレッドシート作成: ' + url; },
   'setup.holidayOk': '[OK] 日本の祝日カレンダーを確認しました',
-  'setup.holidayWarn': '[WARN] 日本の祝日カレンダーを読み込めません。Googleカレンダーに「日本の祝日」カレンダーを追加すると、祝日にはメールを送りません。',
+  'setup.holidayWarn': '[WARN] 日本の祝日カレンダーを読み込めません。Googleカレンダーに「日本の祝日」カレンダー(英語の画面では「Holidays in Japan」、韓国語の画面では韓国語の名前)を追加すると、祝日にはメールを送りません。',
   'selftest.cellChanged': function (list) { return '[FAIL] セル保存の往復: 値が変わりました → ' + list; },
   'selftest.cellOk': function (n) { return '[OK] セル保存の往復(' + n + '個の値をそのまま保持)'; },
   'selftest.check.owner': '所有者の確認',
@@ -619,7 +629,7 @@ const MSG_JA_ = {
   'selftest.sheetMissing': function (name) { return 'シート「' + name + '」なし'; },
   'selftest.headerMismatch': function (name, header) { return 'シート「' + name + '」の見出しが一致しません: ' + header + '(setup を再実行すると新しい列が追加されます)'; },
   'selftest.calendarOk': function (n) { return '[OK] 既定のカレンダーの取得(今日 ' + n + '件)'; },
-  'selftest.holidayOk': '[OK] 日本の祝日カレンダーを登録済み',
+  'selftest.holidayOk': function (name) { return '[OK] 日本の祝日カレンダーを登録済み' + (name ? ': ' + name : ''); },
   'selftest.holidayWarn': '[WARN] 日本の祝日カレンダーが未登録です(祝日にもメールが送信されます)',
   'selftest.quota': function (n) { return '[OK] 今日送信できる残りのメール数: ' + n; },
   'selftest.backupFolder': function (name) { return '[OK] バックアップフォルダ: ' + name; },
@@ -1599,6 +1609,7 @@ function restoreWorklog_(input) {
  * 구글 캘린더 읽기 전용 연동.
  * - 기본 캘린더: 회의 일정 표시용. 내가 '거절'한 일정은 뺀다.
  * - 일본 공휴일 캘린더: 본인 캘린더에 구독돼 있어야 getCalendarById가 값을 돌려준다.
+ *   구글 화면 언어에 따라 ja/ko/en 캘린더 중 하나가 추가되므로 셋 다 찾아본다 (v1.15, HOLIDAY_CALENDAR_IDS).
  * 캘린더 조회가 실패해도 앱 전체가 멈추지 않도록 에러를 결과에 담아 돌려준다.
  */
 
@@ -1653,17 +1664,58 @@ function getCalendarEvents_(from, to) {
   }
 }
 
-/** @return {{available: boolean, holidays: Array<{date: string, name: string}>}} */
-function getHolidays_(from, to) {
+/**
+ * 구독된 일본 공휴일 캘린더: HOLIDAY_CALENDAR_IDS 순서(ja → ko → en)로 먼저 찾은 것. 없으면 null.
+ * 한 ID 조회가 실패해도 나머지는 계속 찾는다.
+ */
+function findHolidayCalendar_() {
+  for (let i = 0; i < HOLIDAY_CALENDAR_IDS.length; i++) {
+    try {
+      const cal = CalendarApp.getCalendarById(HOLIDAY_CALENDAR_IDS[i]);
+      if (cal) return cal;
+    } catch (e) {
+      console.warn(JSON.stringify({ where: 'findHolidayCalendar_', message: e && e.message }));
+    }
+  }
+  return null;
+}
+
+/** 캘린더에 보이는 이름 (못 읽으면 빈 문자열) */
+function holidayCalendarName_(cal) {
   try {
-    const cal = CalendarApp.getCalendarById(HOLIDAY_CALENDAR_ID);
+    return String(cal.getName() || '');
+  } catch (e) {
+    return '';
+  }
+}
+
+/**
+ * 쉬는 날이 아닌 기념일(節分·ひな祭り 등)인지: 설명의 첫 줄(빈 줄은 건너뜀, 앞뒤 공백 제거)이 祭日(ja) 또는 Observance(ko·en).
+ * 둘째 줄 이후의 안내 문구(「祭日を非表示にするには…」)에는 걸리지 않게 첫 줄만 본다. 줄바꿈은 LF·CRLF·CR 모두 처리.
+ */
+function isObservance_(ev) {
+  const lines = String(ev.getDescription() || '').split(/\r\n|\r|\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line) return NON_HOLIDAY_MARKERS.indexOf(line) >= 0;
+  }
+  return false;
+}
+
+/**
+ * @param {Object=} knownCalendar 이미 찾은 공휴일 캘린더 (runSelfTest처럼 이름도 필요할 때 두 번 찾지 않게)
+ * @return {{available: boolean, holidays: Array<{date: string, name: string}>}}
+ */
+function getHolidays_(from, to, knownCalendar) {
+  try {
+    const cal = knownCalendar || findHolidayCalendar_();
     if (!cal) return { available: false, holidays: [] };
 
     const events = cal.getEvents(jstToDate_(from), jstToDate_(addDaysYmd_(to, 1)));
     const holidays = [];
     for (let i = 0; i < events.length; i++) {
       const ev = events[i];
-      if (String(ev.getDescription() || '').indexOf(NON_HOLIDAY_MARKER) >= 0) continue;
+      if (isObservance_(ev)) continue;
       const date = ev.isAllDayEvent() ? formatYmd_(ev.getAllDayStartDate()) : formatYmd_(ev.getStartTime());
       if (date < from || date > to) continue;
       holidays.push({ date: date, name: ev.getTitle() });
@@ -3067,7 +3119,10 @@ function runSelfTest() {
     return t_('selftest.calendarOk', r.events.length);
   });
   check(t_('selftest.check.holiday'), function () {
-    return t_(getHolidays_(todayYmd_(), todayYmd_()).available ? 'selftest.holidayOk' : 'selftest.holidayWarn');
+    // v1.15: 실제로 찾은 캘린더 이름(日本の祝日 / 일본의 휴일 / Holidays in Japan)을 함께 보여 준다
+    const cal = findHolidayCalendar_();
+    if (!cal || !getHolidays_(todayYmd_(), todayYmd_(), cal).available) return t_('selftest.holidayWarn');
+    return t_('selftest.holidayOk', holidayCalendarName_(cal));
   });
   check(t_('selftest.check.quota'), function () { return t_('selftest.quota', MailApp.getRemainingDailyQuota()); });
   check(t_('selftest.check.backup'), function () { return t_('selftest.backupFolder', getBackupFolder_().getName()); });

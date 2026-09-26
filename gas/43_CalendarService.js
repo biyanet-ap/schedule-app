@@ -2,6 +2,7 @@
  * 구글 캘린더 읽기 전용 연동.
  * - 기본 캘린더: 회의 일정 표시용. 내가 '거절'한 일정은 뺀다.
  * - 일본 공휴일 캘린더: 본인 캘린더에 구독돼 있어야 getCalendarById가 값을 돌려준다.
+ *   구글 화면 언어에 따라 ja/ko/en 캘린더 중 하나가 추가되므로 셋 다 찾아본다 (v1.15, HOLIDAY_CALENDAR_IDS).
  * 캘린더 조회가 실패해도 앱 전체가 멈추지 않도록 에러를 결과에 담아 돌려준다.
  */
 
@@ -56,17 +57,58 @@ function getCalendarEvents_(from, to) {
   }
 }
 
-/** @return {{available: boolean, holidays: Array<{date: string, name: string}>}} */
-function getHolidays_(from, to) {
+/**
+ * 구독된 일본 공휴일 캘린더: HOLIDAY_CALENDAR_IDS 순서(ja → ko → en)로 먼저 찾은 것. 없으면 null.
+ * 한 ID 조회가 실패해도 나머지는 계속 찾는다.
+ */
+function findHolidayCalendar_() {
+  for (let i = 0; i < HOLIDAY_CALENDAR_IDS.length; i++) {
+    try {
+      const cal = CalendarApp.getCalendarById(HOLIDAY_CALENDAR_IDS[i]);
+      if (cal) return cal;
+    } catch (e) {
+      console.warn(JSON.stringify({ where: 'findHolidayCalendar_', message: e && e.message }));
+    }
+  }
+  return null;
+}
+
+/** 캘린더에 보이는 이름 (못 읽으면 빈 문자열) */
+function holidayCalendarName_(cal) {
   try {
-    const cal = CalendarApp.getCalendarById(HOLIDAY_CALENDAR_ID);
+    return String(cal.getName() || '');
+  } catch (e) {
+    return '';
+  }
+}
+
+/**
+ * 쉬는 날이 아닌 기념일(節分·ひな祭り 등)인지: 설명의 첫 줄(빈 줄은 건너뜀, 앞뒤 공백 제거)이 祭日(ja) 또는 Observance(ko·en).
+ * 둘째 줄 이후의 안내 문구(「祭日を非表示にするには…」)에는 걸리지 않게 첫 줄만 본다. 줄바꿈은 LF·CRLF·CR 모두 처리.
+ */
+function isObservance_(ev) {
+  const lines = String(ev.getDescription() || '').split(/\r\n|\r|\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line) return NON_HOLIDAY_MARKERS.indexOf(line) >= 0;
+  }
+  return false;
+}
+
+/**
+ * @param {Object=} knownCalendar 이미 찾은 공휴일 캘린더 (runSelfTest처럼 이름도 필요할 때 두 번 찾지 않게)
+ * @return {{available: boolean, holidays: Array<{date: string, name: string}>}}
+ */
+function getHolidays_(from, to, knownCalendar) {
+  try {
+    const cal = knownCalendar || findHolidayCalendar_();
     if (!cal) return { available: false, holidays: [] };
 
     const events = cal.getEvents(jstToDate_(from), jstToDate_(addDaysYmd_(to, 1)));
     const holidays = [];
     for (let i = 0; i < events.length; i++) {
       const ev = events[i];
-      if (String(ev.getDescription() || '').indexOf(NON_HOLIDAY_MARKER) >= 0) continue;
+      if (isObservance_(ev)) continue;
       const date = ev.isAllDayEvent() ? formatYmd_(ev.getAllDayStartDate()) : formatYmd_(ev.getStartTime());
       if (date < from || date > to) continue;
       holidays.push({ date: date, name: ev.getTitle() });

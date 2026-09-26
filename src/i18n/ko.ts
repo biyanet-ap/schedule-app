@@ -51,7 +51,7 @@ const ko = {
     allProjects: '전체 프로젝트',
     brand: '스케줄',
     diary: '📔 다이어리',
-    holidayMissing: '일본 공휴일 캘린더를 읽을 수 없어서 공휴일 표시가 빠져 있습니다. 구글 캘린더에 "日本の祝日" 캘린더를 추가하면 표시됩니다.',
+    holidayMissing: '일본 공휴일 캘린더를 읽을 수 없어서 공휴일 표시가 빠져 있습니다. 구글 캘린더에 「일본 공휴일」(일본어 화면: 「日本の祝日」, 영어 화면: 「Holidays in Japan」) 캘린더를 추가하면 표시됩니다.',
     legend: '범례',
     legendHoliday: '빨간 날짜 = 주말·공휴일',
     legendMeeting: '회의 일정',

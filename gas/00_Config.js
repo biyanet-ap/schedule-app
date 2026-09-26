@@ -104,9 +104,19 @@ const TRIGGERS = Object.freeze({
   BACKUP: Object.freeze({ handler: 'weeklyBackup', hour: 3 }),
 });
 
-const HOLIDAY_CALENDAR_ID = 'ja.japanese#holiday@group.v.calendar.google.com';
-/** 공휴일 캘린더 중 이 문자열이 설명에 들어간 이벤트는 쉬는 날이 아닌 기념일로 본다. */
-const NON_HOLIDAY_MARKER = '祭日';
+/**
+ * 일본 공휴일 캘린더 ID (v1.15). 구글 캘린더에서 추가할 때 화면 언어에 따라 다른 캘린더가 추가된다.
+ * - ja: 「日本の祝日」 — 공휴일 이름·설명이 일본어
+ * - ko: 「일본의 휴일」, en: 「Holidays in Japan」 — 공휴일 이름·설명이 영어
+ * 앞에서부터 찾아 먼저 구독돼 있는 것을 쓴다 (일본어 이름이 나오는 ja 우선). 설계: docs/design/holiday-calendar.md
+ */
+const HOLIDAY_CALENDAR_IDS = Object.freeze([
+  'ja.japanese#holiday@group.v.calendar.google.com',
+  'ko.japanese#holiday@group.v.calendar.google.com',
+  'en.japanese#holiday@group.v.calendar.google.com',
+]);
+/** 공휴일 캘린더 이벤트 설명의 첫 줄이 이 값이면 쉬는 날이 아닌 기념일로 본다 (ja: 祭日, ko·en: Observance) */
+const NON_HOLIDAY_MARKERS = Object.freeze(['祭日', 'Observance']);
 
 const PROP_KEYS = Object.freeze({
   SPREADSHEET_ID: 'SPREADSHEET_ID',

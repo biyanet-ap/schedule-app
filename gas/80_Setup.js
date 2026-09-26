@@ -170,7 +170,10 @@ function runSelfTest() {
     return t_('selftest.calendarOk', r.events.length);
   });
   check(t_('selftest.check.holiday'), function () {
-    return t_(getHolidays_(todayYmd_(), todayYmd_()).available ? 'selftest.holidayOk' : 'selftest.holidayWarn');
+    // v1.15: 실제로 찾은 캘린더 이름(日本の祝日 / 일본의 휴일 / Holidays in Japan)을 함께 보여 준다
+    const cal = findHolidayCalendar_();
+    if (!cal || !getHolidays_(todayYmd_(), todayYmd_(), cal).available) return t_('selftest.holidayWarn');
+    return t_('selftest.holidayOk', holidayCalendarName_(cal));
   });
   check(t_('selftest.check.quota'), function () { return t_('selftest.quota', MailApp.getRemainingDailyQuota()); });
   check(t_('selftest.check.backup'), function () { return t_('selftest.backupFolder', getBackupFolder_().getName()); });

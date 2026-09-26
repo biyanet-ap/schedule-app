@@ -17,6 +17,11 @@ import { randomUUID } from 'node:crypto';
 const GAS_DIR = fileURLToPath(new URL('../../gas', import.meta.url));
 export const OWNER = 'owner@example.com';
 export const HOLIDAY_ID = 'ja.japanese#holiday@group.v.calendar.google.com';
+/** v1.15: 구글 화면 언어가 한국어·영어일 때 추가되는 일본 공휴일 캘린더 */
+export const HOLIDAY_ID_KO = 'ko.japanese#holiday@group.v.calendar.google.com';
+export const HOLIDAY_ID_EN = 'en.japanese#holiday@group.v.calendar.google.com';
+/** 실제 캘린더 이름 (2026-09-27 Calendar API로 확인) */
+export const HOLIDAY_NAMES: Record<string, string> = { [HOLIDAY_ID]: '日本の祝日', [HOLIDAY_ID_KO]: '일본의 휴일', [HOLIDAY_ID_EN]: 'Holidays in Japan' };
 
 type Cell = string | number | boolean | Date | { formula: string };
 
@@ -194,8 +199,9 @@ function makeEvent(spec: MockEventSpec) {
   };
 }
 
-function makeCalendar(list: () => MockEventSpec[], shouldThrow: () => boolean) {
+function makeCalendar(list: () => MockEventSpec[], shouldThrow: () => boolean, name = '') {
   return {
+    getName: () => name,
     getEvents(from: Date, to: Date) {
       if (shouldThrow()) throw new Error('Calendar service error');
       return list().map(makeEvent).filter((e) => e.start < to && e.end > from).map((e) => e.api);
@@ -313,6 +319,10 @@ export interface HarnessState {
   calendarThrows: boolean;
   holidaySubscribed: boolean;
   holidays: MockEventSpec[];
+  /** v1.15: ja 말고 구독된 공휴일 캘린더 (ko·en ID → 이벤트) */
+  otherHolidayCalendars: Record<string, MockEventSpec[]>;
+  /** v1.15: getCalendarById가 오류를 내는 캘린더 ID */
+  calendarLookupThrowsIds: string[];
   sentMails: Array<Record<string, string>>;
   mailThrows: boolean;
   triggers: Array<{ handler: string; config: Record<string, unknown> }>;
@@ -341,6 +351,8 @@ export function createGas(options: CreateGasOptions = {}) {
     calendarThrows: false,
     holidaySubscribed: true,
     holidays: [],
+    otherHolidayCalendars: {},
+    calendarLookupThrowsIds: [],
     sentMails: [],
     mailThrows: false,
     triggers: [],
@@ -405,9 +417,12 @@ export function createGas(options: CreateGasOptions = {}) {
     CalendarApp: {
       GuestStatus: { NO: 'NO', YES: 'YES', MAYBE: 'MAYBE', INVITED: 'INVITED', OWNER: 'OWNER' },
       getDefaultCalendar: () => makeCalendar(() => state.calendarEvents, () => state.calendarThrows),
-      getCalendarById: (id: string) => (id === HOLIDAY_ID && state.holidaySubscribed
-        ? makeCalendar(() => state.holidays, () => false)
-        : null),
+      getCalendarById: (id: string) => {
+        if (state.calendarLookupThrowsIds.includes(id)) throw new Error('Calendar lookup error');
+        if (id === HOLIDAY_ID) return state.holidaySubscribed ? makeCalendar(() => state.holidays, () => false, HOLIDAY_NAMES[id]) : null;
+        const other = state.otherHolidayCalendars[id];
+        return other ? makeCalendar(() => state.otherHolidayCalendars[id] ?? [], () => false, HOLIDAY_NAMES[id] ?? '') : null;
+      },
     },
     MailApp: {
       sendEmail: (m: Record<string, string>) => {
