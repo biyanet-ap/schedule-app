@@ -1,6 +1,7 @@
 /**
  * 주간 업무 보고 글 만들기 (순수 함수). 설계: docs/design/weekly-report.md
  * 주는 월~금. 데이터는 apiGetRange(그 주 월요일 ~ 다음 주 금요일) 결과를 그대로 받는다.
+ * v1.16: 작업기록 내용을 타이틀 아래에 두 칸 들여써서 넣을 수 있다 (includeContent).
  */
 import type { Project, RangeData, Schedule, Worklog } from '../api/types';
 import { msgs } from '../i18n';
@@ -12,6 +13,11 @@ export interface WeeklyReportCounts {
   inProgress: number;
   overdue: number;
   nextWeek: number;
+}
+
+export interface WeeklyReportOptions {
+  /** 완료·진행 중 작업기록의 내용을 타이틀 아래에 두 칸 들여써서 넣는다 (v1.16). 기본 false = 타이틀만 */
+  includeContent?: boolean;
 }
 
 export interface WeeklyReport {
@@ -27,6 +33,8 @@ interface Item {
   sortKey: string;
   createdAt: string;
   label: string;
+  /** 타이틀 아래에 두 칸 들여써서 넣을 줄 (작업기록 내용). 없으면 빈 배열 */
+  body: string[];
 }
 
 function overlaps(span: { start: string; end: string }, from: string, to: string): boolean {
@@ -43,12 +51,26 @@ export function scheduleWhen(s: Schedule): string {
   return msgs().weeklyText.when(scheduleDateText(s));
 }
 
-function worklogItem(w: Worklog): Item {
-  return { projectId: w.projectId, sortKey: w.workDate, createdAt: w.createdAt, label: w.title };
+/**
+ * 작업기록 내용 → 보고 글에 넣을 줄. 줄바꿈(LF·CRLF·CR)으로 나누고, 줄 끝 공백을 지우고, 빈 줄은 뺀다.
+ * 줄 앞의 들여쓰기·'-' 같은 기호는 사용자가 쓴 그대로 둔다.
+ */
+export function contentLines(content: string): string[] {
+  return String(content || '')
+    .split(/\r\n|\r|\n/)
+    .map((line) => line.trimEnd())
+    .filter((line) => line !== '');
+}
+
+function worklogItem(w: Worklog, includeContent: boolean): Item {
+  return {
+    projectId: w.projectId, sortKey: w.workDate, createdAt: w.createdAt, label: w.title,
+    body: includeContent ? contentLines(w.content) : [],
+  };
 }
 
 function scheduleItem(s: Schedule): Item {
-  return { projectId: s.projectId, sortKey: s.startAt, createdAt: s.createdAt, label: msgs().weeklyText.item(s.title, scheduleWhen(s)) };
+  return { projectId: s.projectId, sortKey: s.startAt, createdAt: s.createdAt, label: msgs().weeklyText.item(s.title, scheduleWhen(s)), body: [] };
 }
 
 /** 프로젝트 정렬 순서대로 묶고, 프로젝트가 없거나 모르는 항목은 맨 뒤 [기타] */
@@ -61,7 +83,7 @@ function groupLines(items: Item[], projects: Project[]): string[] {
   const lines: string[] = [];
   const push = (label: string, group: Item[]) => {
     if (!group.length) return;
-    lines.push(`[${label}]`, ...group.sort(byItem).map((i) => `- ${i.label}`));
+    lines.push(`[${label}]`, ...group.sort(byItem).flatMap((i) => [`- ${i.label}`, ...i.body.map((b) => `  ${b}`)]));
   };
   for (const p of order) push(p.name, items.filter((i) => i.projectId === p.id));
   push(t.noProject, items.filter((i) => !i.projectId || !known.has(i.projectId)));
@@ -74,20 +96,23 @@ function groupLines(items: Item[], projects: Project[]): string[] {
  * - 미완료 일정: 작업 일정 중 '예정'이고 종료일이 그 주 안이면서 오늘 이전 또는 오늘 (회의·취소 제외)
  * - 다음 주 예정: 다음 주 월~금과 겹치는 앱 일정(작업·회의) 중 '예정'
  * @param today 'YYYY-MM-DD' (JST) — 미완료 판정 기준
+ * @param options.includeContent 작업기록 내용을 넣을지 (v1.16, 기본 false)
  */
 export function buildWeeklyReport(
   data: Pick<RangeData, 'worklogs' | 'schedules'>,
   projects: Project[],
   weekStart: string,
   today: string,
+  options: WeeklyReportOptions = {},
 ): WeeklyReport {
+  const includeContent = options.includeContent === true;
   const friday = addDays(weekStart, 4);
   const nextMonday = addDays(weekStart, 7);
   const nextFriday = addDays(weekStart, 11);
 
   const weekLogs = data.worklogs.filter((w) => overlaps(worklogSpan(w), weekStart, friday));
-  const done = weekLogs.filter((w) => w.status === 'DONE').map(worklogItem);
-  const inProgress = weekLogs.filter((w) => w.status !== 'DONE').map(worklogItem);
+  const done = weekLogs.filter((w) => w.status === 'DONE').map((w) => worklogItem(w, includeContent));
+  const inProgress = weekLogs.filter((w) => w.status !== 'DONE').map((w) => worklogItem(w, includeContent));
 
   const overdue = data.schedules
     .filter((s) => {

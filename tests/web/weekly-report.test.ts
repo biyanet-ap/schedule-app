@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Project, Schedule, Worklog } from '../../src/api/types';
-import { buildWeeklyReport, reportWeekLabel, scheduleWhen } from '../../src/utils/weeklyReport';
+import { buildWeeklyReport, contentLines, reportWeekLabel, scheduleWhen } from '../../src/utils/weeklyReport';
 
 const P = (id: string, name: string, sortOrder: number): Project => ({ id, name, color: '#000000', sortOrder, active: true, updatedAt: '' });
 const projects = [P('pb', '프로젝트 B', 2), P('pa', '프로젝트 A', 1)];
@@ -114,5 +114,66 @@ describe('주간 보고 — 빈 주와 표시 형식', () => {
       schedules: [S({ title: '금요일 작업', startAt: '2026-09-18T10:00', endAt: '2026-09-18T11:00' })],
     }, projects, '2026-09-14', TODAY);
     expect(r.counts.overdue).toBe(1);
+  });
+});
+
+describe('주간 보고 — 작업기록 내용 포함 (v1.16)', () => {
+  const data = {
+    worklogs: [
+      W({ title: '이번 주 업무 정리', workDate: '2026-09-21', endDate: '2026-09-25', projectId: 'pa', content: '주요 진행 사항\n- 릴리스 준비\n- 코드 리뷰' }),
+      W({ title: '배포 점검', workDate: '2026-09-22', projectId: 'pa', status: 'DONE', content: '  들여쓴 줄\r\n\r\n끝 공백   \r마지막' }),
+      W({ title: '내용 없음', workDate: '2026-09-23', status: 'DONE' }),
+      W({ title: '빈 줄만', workDate: '2026-09-23', status: 'DONE', content: '\n  \n\u3000\n' }),
+    ],
+    schedules: [
+      S({ title: '설명 있는 일정', startAt: '2026-09-21T10:00', endAt: '2026-09-21T11:00', description: '일정 설명은 넣지 않음' }),
+    ],
+  };
+
+  it('켜면 타이틀 아래에 두 칸 들여써서 넣는다 (사용자 들여쓰기·기호 유지, 빈 줄 제외, CRLF·CR 처리)', () => {
+    const r = buildWeeklyReport(data, projects, MON, TODAY, { includeContent: true });
+    const inProgress = r.text.split('■ 진행 중인 작업')[1].split('■')[0];
+    expect(inProgress).toContain('- 이번 주 업무 정리\n  주요 진행 사항\n  - 릴리스 준비\n  - 코드 리뷰\n');
+    const done = r.text.split('■ 완료한 작업')[1].split('■')[0];
+    expect(done).toContain('- 배포 점검\n    들여쓴 줄\n  끝 공백\n  마지막\n');
+    // 내용이 없거나 빈 줄뿐이면 타이틀만
+    expect(done).toContain('- 내용 없음\n- 빈 줄만\n');
+  });
+
+  it('일정(미완료·다음 주)에는 내용을 넣지 않는다', () => {
+    const r = buildWeeklyReport(data, projects, MON, TODAY, { includeContent: true });
+    expect(r.text).toContain('- 설명 있는 일정 (9/21 월 10:00)');
+    expect(r.text).not.toContain('일정 설명은 넣지 않음');
+  });
+
+  it('끄면(기본) 지금처럼 타이틀만이고, 요약 숫자는 켜고 끄기와 같다', () => {
+    const off = buildWeeklyReport(data, projects, MON, TODAY);
+    const explicitOff = buildWeeklyReport(data, projects, MON, TODAY, { includeContent: false });
+    const on = buildWeeklyReport(data, projects, MON, TODAY, { includeContent: true });
+    expect(off.text).toBe(explicitOff.text);
+    expect(off.text).not.toContain('주요 진행 사항');
+    expect(off.text).not.toContain('  - 릴리스 준비');
+    expect(on.counts).toEqual(off.counts);
+    // 내용 줄을 빼면 켠 글과 끈 글이 같다
+    expect(on.text.split('\n').filter((l) => !l.startsWith('  ')).join('\n')).toBe(off.text);
+  });
+
+  it('contentLines: 줄바꿈 3종, 줄 끝 공백(전각 포함) 제거, 빈 줄 제외, 빈 값', () => {
+    expect(contentLines('a\r\nb\rc\nd')).toEqual(['a', 'b', 'c', 'd']);
+    expect(contentLines('  x  \n\t\n y\u3000')).toEqual(['  x', ' y']);
+    expect(contentLines('')).toEqual([]);
+    expect(contentLines(undefined as unknown as string)).toEqual([]);
+  });
+
+  it('일본어 화면에서도 같은 형식', async () => {
+    const { setLang } = await import('../../src/i18n');
+    setLang('ja');
+    try {
+      const r = buildWeeklyReport(data, projects, MON, TODAY, { includeContent: true });
+      expect(r.text).toContain('- 이번 주 업무 정리\n  주요 진행 사항\n');
+      expect(r.text).toContain('■ 進行中の作業');
+    } finally {
+      setLang('ko');
+    }
   });
 });
