@@ -16,7 +16,7 @@ import WeeklyReportDialog from './components/WeeklyReportDialog.vue';
 import WorklogDialog from './components/WorklogDialog.vue';
 import { closeDiarySearch, closeSearch, diaryOn, holidayName, init, loadDiaryWeek, loadRange, refreshToday, resetDiaryView, runSearch, store, type NavRequest } from './store';
 import { addDays } from './utils/date';
-import { COLORS, toEventInputs, type EventMeta } from './utils/events';
+import { COLORS, legendProjects, toEventInputs, type EventMeta } from './utils/events';
 import { tr } from './i18n';
 
 type DialogState =
@@ -53,7 +53,9 @@ const onMobileChange = (e: MediaQueryListEvent) => { mobile.value = e.matches; }
 const onDarkChange = (e: MediaQueryListEvent) => { dark.value = e.matches; };
 
 const holidays = computed(() => new Set(store.data.holidays.map((h) => h.date)));
-const events = computed(() => toEventInputs(store.data, store.projects, store.filter));
+const events = computed(() => toEventInputs(store.data, store.projects, store.filter, { dark: dark.value, list: mobile.value }));
+/** 범례의 프로젝트 색 목록: 지금 보이는 범위에 나오는 프로젝트만 (v1.17) */
+const legend = computed(() => legendProjects(store.data, store.projects, store.filter));
 /** 필터로 선택 중인 프로젝트가 사용 중지되더라도 목록에서 사라지지 않게 남겨 둔다 */
 const filterProjects = computed(() => store.projects.filter((p) => p.active || p.id === store.filter.projectId));
 
@@ -261,10 +263,9 @@ watch(() => store.nav, (req) => {
           @event-click="onEventClick"
           @range-change="onRangeChange"
         />
-        <div class="legend" :aria-label="tr.app.legend">
-          <span><i class="dot" :style="{ background: COLORS.task }" />{{ tr.app.legendTask }}</span>
-          <span><i class="dot" :style="{ background: COLORS.meeting }" />{{ tr.app.legendMeeting }}</span>
-          <span><i class="dot" :style="{ background: COLORS.worklog }" />{{ tr.common.worklog }}</span>
+        <div class="legend" role="group" :aria-label="tr.app.legend">
+          <span v-for="p in legend" :key="p.id" class="legend-project" :title="p.name"><i class="dot" :style="{ background: p.color }" /><span class="name">{{ p.name }}</span></span>
+          <span v-if="!mobile">{{ tr.app.legendBars }}</span>
           <label><input v-model="store.filter.showGcal" type="checkbox" /><i class="dot" :style="{ background: COLORS.gcal }" />{{ tr.common.gcal }}</label>
           <span class="holiday-legend">{{ tr.app.legendHoliday }}</span>
         </div>
@@ -340,6 +341,7 @@ watch(() => store.nav, (req) => {
 .legend span, .legend label { display: inline-flex; align-items: center; gap: 5px; }
 .legend label { cursor: pointer; }
 .legend .dot { width: 10px; height: 10px; }
+.legend-project .name { display: block; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .holiday-legend { color: var(--holiday) !important; }
 
 @media (max-width: 1080px) {

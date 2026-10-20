@@ -13,6 +13,10 @@
   --warn: #b45309;
   --warn-weak: #fffbeb;
   --holiday: #dc2626;
+  /* 작업기록 막대의 연한 배경에 섞는 프로젝트 색 비율 (v1.17). src/utils/color.ts TINT_RATIO와 같아야 한다 */
+  --ev-tint-mix: 18%;
+  /* 완료 일정 막대의 연한 배경 비율 (v1.18, 라이트·다크 같음). src/utils/color.ts DONE_RATIO와 같아야 한다 */
+  --ev-done-mix: 35%;
   --shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
   --radius: 10px;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo',
@@ -42,6 +46,7 @@
     --warn: #fbbf24;
     --warn-weak: #2f2610;
     --holiday: #f87171;
+    --ev-tint-mix: 32%;
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     color-scheme: dark;
   }
@@ -122,7 +127,25 @@ select.input { padding-right: 6px; }
 }
 
 /* FullCalendar 보정 */
+/* 완료 줄 흐리게: 휴대폰 목록 보기 전용 (PC 달력은 v1.18부터 .ev-faded·글자색으로 표시) */
 .ev-done { opacity: 0.55; }
+/*
+ * 작업기록 막대 (v1.17): 배경은 프로젝트 색(--fc-event-color)을 화면 바탕색과 섞은 연한 색, 테두리는 프로젝트 색.
+ * - 글자색은 src/utils/color.ts tintColors()가 같은 비율(--ev-tint-mix)로 계산해 contrastColor로 넘긴다.
+ * - 전역 규칙이어야 한다: 「+N」 팝오버는 FullCalendar가 document.body에 그려서 .calendar-wrap 밖이다.
+ * - :root를 붙여 FullCalendar 테마 클래스보다 우선. classic 테마는 화면에서 막대 테두리를 투명하게 그려서 색을 직접 준다.
+ * - 인쇄에서는 빼서 FullCalendar 기본(흰 배경)을 따른다 (다크 모드 인쇄에서 어두운 배경이 남지 않게).
+ */
+@media not print {
+  :root .ev-tint {
+    background-color: color-mix(in srgb, var(--fc-event-color) var(--ev-tint-mix), var(--surface));
+    border-color: var(--fc-event-color);
+  }
+  /* 완료 일정 막대 (v1.18): 프로젝트 색을 연하게, 글자는 events.ts가 검정(다크는 흰색)으로 넘긴다. 테두리는 없음 */
+  :root .ev-faded {
+    background-color: color-mix(in srgb, var(--fc-event-color) var(--ev-done-mix), var(--surface));
+  }
+}
 /* 토·일·공휴일 날짜 숫자 (월 보기: 칸 상단, 목록 보기: 날짜 머리글) */
 .day-red { color: var(--holiday) !important; }
 .is-selected { background: var(--primary-weak) !important; }

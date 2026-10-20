@@ -6,14 +6,14 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import type { Project } from '../api/types';
 import { errorMessage, saveProject, store, toast } from '../store';
 import { tr } from '../i18n';
+import { PALETTE, safeColor } from '../utils/color';
+import { COLORS } from '../utils/events';
 
 /** 저장 중에는 창을 닫지 못하게 부모(설정 창)에 알린다 */
 const emit = defineEmits<{ busy: [value: boolean] }>();
 
-const PALETTE = ['#2563eb', '#db2777', '#ea580c', '#0891b2', '#65a30d', '#9333ea', '#ca8a04', '#475569'];
-
 const editingId = ref<string | null>(null);
-const form = reactive({ name: '', color: PALETTE[0], sortOrder: 0, active: true });
+const form = reactive({ name: '', color: PALETTE[0] as string, sortOrder: 0, active: true });
 const busy = ref(false);
 const error = ref('');
 
@@ -66,7 +66,7 @@ async function submit() {
     <p class="hint">{{ tr.projects.hint }}</p>
     <ul class="list">
       <li v-for="p in store.projects" :key="p.id" :class="{ inactive: !p.active }">
-        <span class="dot" :style="{ background: p.color }" />
+        <span class="dot" :style="{ background: safeColor(p.color, COLORS.task) }" />
         <span class="name">{{ p.name }}</span>
         <span v-if="!p.active" class="chip">{{ tr.projects.inactive }}</span>
         <button type="button" class="btn btn-sm btn-ghost" @click="startEdit(p)">{{ tr.diaryView.edit }}</button>

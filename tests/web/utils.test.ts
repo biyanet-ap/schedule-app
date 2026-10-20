@@ -66,8 +66,9 @@ describe('event mapping', () => {
     expect(ev.some((e) => e.id === 's:s2')).toBe(false);
     expect(ev.find((e) => e.id === 's:s3')!.title).toBe('✓ t'); // 완료면 중요 표시 생략
     expect(ev.map((e) => String(e.id).slice(0, 2)).sort()).toEqual(['c:', 'h:', 's:', 's:', 'w:', 'w:']);
-    expect(ev.find((e) => e.id === 'w:w1')).toMatchObject({ title: '✎ 기록', className: '' });
-    expect(ev.find((e) => e.id === 'w:w2')).toMatchObject({ title: '✓ 끝난 기록', className: 'ev-done' });
+    // v1.17: PC 달력의 작업기록은 연한 배경(ev-tint). v1.18: 완료도 흐리게 하지 않고 같은 막대(글자만 검정)
+    expect(ev.find((e) => e.id === 'w:w1')).toMatchObject({ title: '✎ 기록', className: 'ev-tint' });
+    expect(ev.find((e) => e.id === 'w:w2')).toMatchObject({ title: '✓ 끝난 기록', className: 'ev-tint', contrastColor: '#000000' });
   });
 
   it('기간 기록은 종료일까지 이어진 종일 막대 (end = 종료일 다음날)', () => {

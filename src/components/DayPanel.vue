@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import type { CalendarEvent, Diary, Schedule, Worklog } from '../api/types';
 import { errorMessage, projectById, setScheduleStatus, setWorklogStatus, store, toast } from '../store';
 import { formatDateLabel, occursOn, timeLabel } from '../utils/date';
-import { safeHttpUrl } from '../utils/events';
+import { COLORS, safeHttpUrl, scheduleColor, worklogColor } from '../utils/events';
 import { isPeriodLog, periodLabel, worklogOccursOn } from '../utils/worklog';
 import { tr } from '../i18n';
 
@@ -94,7 +94,7 @@ async function toggleWorklogDone(w: Worklog) {
             />
             <button type="button" class="item" @click="emit('openSchedule', s)">
               <span class="line1">
-                <span class="dot" :style="{ background: s.type === 'MEETING' ? '#7c3aed' : projectById(s.projectId)?.color ?? '#2563eb' }" />
+                <span class="dot" :style="{ background: scheduleColor(s, projectById(s.projectId)) }" />
                 <span class="time">{{ timeLabel(s, date) }}</span>
                 <span v-if="s.priority === 'HIGH'" class="badge badge-high">{{ tr.common.high }}</span>
                 <span v-if="s.type === 'MEETING'" class="badge badge-meeting">{{ tr.common.meeting }}</span>
@@ -121,7 +121,7 @@ async function toggleWorklogDone(w: Worklog) {
         <ul class="items">
           <li v-for="m in meetings" :key="m.id" class="readonly">
             <span class="line1">
-              <span class="dot" style="background: #64748b" />
+              <span class="dot" :style="{ background: COLORS.gcal }" />
               <span class="time">{{ timeLabel(m, date) }}</span>
             </span>
             <span class="title">{{ m.title }}</span>
@@ -144,7 +144,7 @@ async function toggleWorklogDone(w: Worklog) {
               <span v-if="w.content" class="excerpt pre">{{ w.content }}</span>
               <span class="meta">
                 <span v-if="projectById(w.projectId)" class="chip">
-                  <span class="dot" :style="{ background: projectById(w.projectId)?.color }" />{{ projectById(w.projectId)?.name }}
+                  <span class="dot" :style="{ background: worklogColor(projectById(w.projectId)) }" />{{ projectById(w.projectId)?.name }}
                 </span>
                 <span v-for="t in w.tags" :key="t" class="chip">#{{ t }}</span>
               </span>
