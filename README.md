@@ -13,8 +13,8 @@
 
 | 言語 | ファイル |
 |---|---|
-| 日本語 | [schedule-app-manual-ko.pdf](https://github.com/user-attachments/files/33696136/schedule-app-manual-ko.pdf) |
-| 한국어(韓国語) | [schedule-app-manual-ja.pdf](https://github.com/user-attachments/files/33696139/schedule-app-manual-ja.pdf) |
+| 日本語 | [schedule-app-manual-ja.pdf](https://github.com/user-attachments/files/33696139/schedule-app-manual-ja.pdf) |
+| 한국어(韓国語) | [schedule-app-manual-ko.pdf](https://github.com/user-attachments/files/33696136/schedule-app-manual-ko.pdf) |
 
 ---
 
